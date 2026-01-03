@@ -1,2 +1,16 @@
 # Absolute.
-A discord bot which uses Deepseek API making it a mini chatBot which everyone can later use to mess around
+
+### A Python-based chatbot powered by DeepSeek API.
+
+* Features
+- Real-time conversation.
+
+- Memory of past messages.
+
+- Streamlit Web Interface.
+
+* How to Run
+
+> pip install -r requirements.txt
+
+> python app.py
