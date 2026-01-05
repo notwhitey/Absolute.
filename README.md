@@ -25,3 +25,6 @@ Absolute is an advanced Discord integration powered by the DeepSeek-V3 language 
    ```bash
    git clone https://github.com/notwhitey/Absolute.
    cd absolute
+2. **Main Command**
+   ```bash
+   !ask [Your Question]
