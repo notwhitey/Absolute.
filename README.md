@@ -1,16 +1,25 @@
-# Absolute.
+# Absolute
 
-## A Python-based chatbot powered by DeepSeek API.
+Absolute is an advanced Discord integration powered by the DeepSeek-V3 language model. This project facilitates high-performance natural language processing within Discord servers, utilizing asynchronous architecture to ensure stability and responsiveness.
 
-###  Features
-- Real-time conversation.
+## Technical Specifications
 
-- Memory of past messages.
+- **Core Engine:** DeepSeek-V3 via DeepSeek API
+- **Framework:** Discord.py (Asynchronous)
+- **Environment Management:** Python-Dotenv
+- **Security:** Decoupled credential management via environment variables
 
-- Streamlit Web Interface.
+## Installation and Deployment
 
-* How to Run
+### Prerequisites
 
-> pip install -r requirements.txt
+- Python 3.10 or higher
+- A valid DeepSeek API Key
+- A Discord Bot Token from the Discord Developer Portal
 
-> python app.py
+### Local Setup
+
+1. **Clone the repository:**
+   ```bash
+   git clone [ABSOLUTE.GG](https://github.com/notwhitey/Absolute.)
+   cd absolute
