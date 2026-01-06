@@ -73,8 +73,10 @@ class AbsoluteElite(commands.Bot):
         await self.tree.sync()
         self.status_loop.start()
 
-    @tasks.loop(minutes=10)
+  @tasks.loop(minutes=10)
     async def status_loop(self):
+        await self.wait_until_ready() 
+        
         statuses = ["the sunset sky ☁️", "lofi beats 🎧", "new code shards ✨", "high aura vibes 🌈"]
         await self.change_presence(activity=discord.Activity(type=discord.ActivityType.watching, name=random.choice(statuses)))
 
