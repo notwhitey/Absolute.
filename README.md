@@ -81,7 +81,9 @@ Run the generator to build the initial 200-line personality matrix:
 
 - personality.txt: The raw logic and lore database.
 
+
 ### 🌊 Credits
+
 Lead Architect: Speedy
 
 Engine: Llama 3.3 via Groq Cloud
