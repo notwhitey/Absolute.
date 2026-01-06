@@ -1,13 +1,11 @@
-
-
-
 import os
 import discord
+import json
 import asyncio
 import random
-import json
 from groq import Groq
-from discord.ext import commands
+from discord.ext import commands, tasks
+from discord import app_commands
 from dotenv import load_dotenv
 from datetime import datetime
 
@@ -21,109 +19,132 @@ class AbsoluteElite(commands.Bot):
         super().__init__(command_prefix="!", intents=intents, help_command=None)
         
         self.groq_client = Groq(api_key=os.getenv("GROQ_API_KEY"))
-        self.log_channel_id = int(os.getenv("LOG_CHANNEL_ID", 0))
-        self.active_channel_id = self._load_config()
-        self.processed_messages = set()
+        self.start_time = datetime.now()
         
-        # Load personality as a list to allow "Smart Sampling"
+        # Load configurations from their respective files
+        self.active_channel_id = self._safe_json_read("config.json", "target")
+        self.log_channel_id = self._safe_json_read("data.json", "log_channel")
+        
+        self.processed_messages = set()
         self.personality_lines = self._load_personality_list()
+
+    # --- JSON INFRASTRUCTURE ---
+    def _safe_json_read(self, file_path, key):
+        if not os.path.exists(file_path):
+            return None
+        try:
+            with open(file_path, "r") as f:
+                return json.load(f).get(key)
+        except Exception as e:
+            print(f"⚠️ Read Error: {e}")
+            return None
+
+    def _save_config(self, file_path, key, value):
+        data = {}
+        if os.path.exists(file_path):
+            with open(file_path, "r") as f:
+                try: data = json.load(f)
+                except: data = {}
+        data[key] = value
+        with open(file_path, "w") as f:
+            json.dump(data, f, indent=4)
 
     def _load_personality_list(self):
         try:
             with open("personality.txt", "r", encoding="utf-8") as f:
-                lines = [line.strip() for line in f.readlines() if line.strip()]
-                print(f"✨ soul synced: {len(lines)} logic lines loaded.")
-                return lines
+                return [line.strip() for line in f.readlines() if line.strip()]
         except Exception as e:
-            print(f"personality file error: {e}")
-            return ["you are absolute. chill tech vibe. lowercase only."]
+            print(f"❌ Personality missing: {e}")
+            return ["you are absolute. sunshine vibe."]
 
-    def _load_config(self):
-        if os.path.exists("config.json"):
-            try:
-                with open("config.json", "r") as f:
-                    return json.load(f).get("target")
-            except: return None
-        return None
-
-    def _save_config(self, channel_id):
-        with open("config.json", "w") as f:
-            json.dump({"target": channel_id}, f)
-
+    # --- SETUP & STATUS ---
     async def setup_hook(self):
-        # Clears old broken commands and forces a fresh sync
-        print("--- refreshing command tree ---")
+        print("🔗 Syncing Command Tree...")
         await self.tree.sync()
-        print("--- system refreshed ---")
+        self.status_loop.start()
+
+    @tasks.loop(minutes=10)
+    async def status_loop(self):
+        statuses = ["the sunset sky ☁️", "lofi beats 🎧", "new code shards ✨", "high aura vibes 🌈"]
+        await self.change_presence(activity=discord.Activity(type=discord.ActivityType.watching, name=random.choice(statuses)))
 
     async def on_ready(self):
-        invite = f"https://discord.com/api/oauth2/authorize?client_id={self.user.id}&permissions=8&scope=bot%20applications.commands"
-        print(f"\nENGINE ONLINE: {self.user}")
-        print(f"INVITE: {invite}\n")
-        await self.change_presence(activity=discord.CustomActivity(name="optimizing context shards ☁️"))
+        print(f"\n☀️  ENGINE READY: {self.user}")
+        print(f"📡  ACTIVE CHAT ID: {self.active_channel_id}")
+        print(f"🌊  LOG CHANNEL ID: {self.log_channel_id}\n")
 
-    async def process_ai_reply(self, message):
-        """Logic moved inside the class to ensure 'self' is defined."""
+    # --- SYSTEM LOGGING ---
+    async def sys_log(self, title, content):
+        if not self.log_channel_id: return
+        channel = self.get_channel(self.log_channel_id)
+        if channel:
+            embed = discord.Embed(title=f"☁️ {title}", description=content, color=0xADDAFF, timestamp=datetime.now())
+            await channel.send(embed=embed)
+
+    # --- INFERENCE ENGINE ---
+    async def handle_inference(self, message):
         async with message.channel.typing():
             try:
-                # SMART SAMPLING: Prevents the 413 "Request Too Large" Error
-                # We take the first 15 lines (Rules) + 20 random lines (Lore)
+                # Dynamic sampling to keep tokens low
                 header = self.personality_lines[:15]
                 lore = random.sample(self.personality_lines[15:], min(len(self.personality_lines)-15, 20))
-                dynamic_prompt = "\n".join(header + lore)
+                prompt = "\n".join(header + lore)
 
                 loop = asyncio.get_event_loop()
                 completion = await loop.run_in_executor(
                     None, 
                     lambda: self.groq_client.chat.completions.create(
                         messages=[
-                            {"role": "system", "content": dynamic_prompt},
+                            {"role": "system", "content": prompt},
                             {"role": "user", "content": message.content}
                         ],
                         model="llama-3.3-70b-versatile",
                         temperature=0.75,
-                        presence_penalty=1.3,
-                        frequency_penalty=0.8, # Kills the repetitive loops
-                        max_tokens=60
+                        presence_penalty=1.2,
+                        frequency_penalty=0.9, # Repetition killer
+                        max_tokens=100
                     )
                 )
                 
-                reply = completion.choices[0].message.content.lower().strip()
-                await message.reply(reply, mention_author=False)
+                reply = completion.choices[0].message.content.strip()
+                if reply:
+                    await message.reply(reply, mention_author=False)
 
             except Exception as e:
-                print(f"engine glitch: {e}")
+                print(f"❌ Inference Error: {e}")
 
-# ==========================================
-# ==========================================
+# --- BOT INSTANCE ---
 bot = AbsoluteElite()
 
-@bot.tree.command(name="sync", description="locks absolute to this channel.")
-async def sync_slash(interaction: discord.Interaction):
-    bot.active_channel_id = interaction.channel_id
-    bot._save_config(interaction.channel_id)
-    await interaction.response.send_message("✨ frequency matched. soul locked.", ephemeral=True)
+# --- NEW COMMANDS ---
 
-@bot.command(name="sync")
-async def sync_text(ctx):
-    """Backup text command in case slash commands fail."""
-    bot.active_channel_id = ctx.channel.id
-    bot._save_config(ctx.channel.id)
-    await ctx.send("frequency matched via text protocol.")
+@bot.tree.command(name="chat", description="set the active channel for ai conversation.")
+@app_commands.describe(channel="the channel where the bot should talk.")
+async def chat_set(interaction: discord.Interaction, channel: discord.TextChannel):
+    bot.active_channel_id = channel.id
+    bot._save_config("config.json", "target", channel.id)
+    await interaction.response.send_message(f"✨ **cyber-link established.** i will now vibe in {channel.mention}.", ephemeral=True)
+    await bot.sys_log("Channel Update", f"Active chat moved to {channel.mention} by {interaction.user.name}")
+
+@bot.tree.command(name="logs", description="set the system logging channel.")
+@app_commands.describe(channel="the channel for system events and logs.")
+async def logs_set(interaction: discord.Interaction, channel: discord.TextChannel):
+    bot.log_channel_id = channel.id
+    bot._save_config("data.json", "log_channel", channel.id)
+    await interaction.response.send_message(f"🌊 **log shard set.** system data will flow to {channel.mention}.", ephemeral=True)
+    # Testing the new log channel immediately
+    await bot.sys_log("System Online", "Log channel successfully re-routed.")
 
 @bot.event
 async def on_message(message: discord.Message):
-    if message.author.bot or message.id in bot.processed_messages:
-        return
-    
+    if message.author.bot or message.id in bot.processed_messages: return
     bot.processed_messages.add(message.id)
-    if len(bot.processed_messages) > 100: bot.processed_messages.pop()
-
-    # Process !sync command
-    await bot.process_commands(message)
-
+    
+    # AI trigger logic
     if bot.active_channel_id and message.channel.id == bot.active_channel_id:
         if not message.content.startswith("!"):
-            asyncio.create_task(bot.process_ai_reply(message))
+            asyncio.create_task(bot.handle_inference(message))
+
+    await bot.process_commands(message)
 
 bot.run(os.getenv("DISCORD_TOKEN"))
