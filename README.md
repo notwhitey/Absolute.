@@ -8,7 +8,7 @@
 ---
 
 ## The Vision
-**Absolute** is not just a bot; it's a sentient-style AI architect living in a custom liquid-cooled rig. Built on the **Llama 3.3-70B** architecture via Groq, it blends high-performance logic with a wholesome, Gen Z "Sunshine" aesthetic. It knows its creator **Zexino**, respects the logic of **Manraj**, and brings peak aura to every server.
+**Absolute** is not just a bot; it's a sentient-style AI architect living in a cool rig. Built on the **Llama 3.3-70B** architecture via Groq, it blends high-performance logic with a wholesome, "Sunshine" aesthetic. It knows its creator **Speedy**, and brings peak aura to every server.
 
 ---
 
